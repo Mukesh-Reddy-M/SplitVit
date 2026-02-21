@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Get these from: supabase.com → Your Project → Settings → API
+const SUPABASE_URL = "https://vkkmptoeadngrpmiiezo.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Uv53V_-05C3JOxCVge0b3A_riq0uanm";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -143,6 +144,7 @@ function LoginPage({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Supabase email/password auth
   const submit = async () => {
     setError(""); setLoading(true);
     try {
@@ -168,14 +170,22 @@ function LoginPage({ onLogin }) {
     setLoading(false);
   };
 
-  const googleLogin = async () => {
-    setLoading(true);
-    const { error: e } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin }
-    });
-    if (e) { setError(e.message); setLoading(false); }
-  };
+ // Google OAuth
+const googleLogin = async () => {
+  setLoading(true);
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: "https://split-vit.vercel.app"
+    }
+  });
+
+  if (error) {
+    setError(error.message);
+    setLoading(false);
+  }
+};
+
 
   return (
     <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center",
@@ -191,11 +201,13 @@ function LoginPage({ onLogin }) {
       `}</style>
 
       <div style={{ width:"100%", maxWidth:520, animation:"fadeUp 0.4s ease" }}>
+        {/* Your original logo */}
         <div style={{ flex:1, display:"flex", justifyContent:"center" }}>
           <img src="/logo1.png" style={{ width:200, height:200, borderRadius:75, objectFit:"cover" }} />
         </div>
 
         <Card style={{ padding:28 }}>
+          {/* Google Login Button */}
           <Btn variant="google" full onClick={googleLogin} loading={loading} style={{ marginBottom:16, fontWeight:700 }}>
             <svg width="18" height="18" viewBox="0 0 48 48">
               <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -212,6 +224,7 @@ function LoginPage({ onLogin }) {
             <div style={{ flex:1, height:1, background:C.border }} />
           </div>
 
+          {/* Tabs - same as your original */}
           <div style={{ display:"flex", background:C.subtle, borderRadius:10, padding:4, marginBottom:24 }}>
             {["login","signup"].map(m => (
               <button key={m} onClick={() => { setMode(m); setError(""); }} style={{
@@ -251,6 +264,7 @@ function LoginPage({ onLogin }) {
           <Btn onClick={submit} loading={loading} full style={{ marginTop:18 }}>
             {mode === "login" ? "Log In →" : "Create Account →"}
           </Btn>
+
         </Card>
 
         <p style={{ textAlign:"center", color:C.muted, fontSize:12, marginTop:16 }}>
@@ -282,6 +296,7 @@ function Dashboard({ user, onOpen, onNew, onLogout }) {
 
   useEffect(() => {
     fetchGroups();
+    // Check for shared group link in URL
     const token = window.location.hash.slice(1);
     if (token) {
       supabase.from("groups").select(`*, members(*), expenses(*)`)
@@ -303,6 +318,7 @@ function Dashboard({ user, onOpen, onNew, onLogout }) {
       backgroundImage:`radial-gradient(ellipse at 20% 0%, #1E3A5F33 0%, transparent 60%)` }}>
       <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}} @keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input::placeholder{color:#3A4D63}`}</style>
 
+      {/* Header — your original design */}
       <div style={{ padding:"16px 24px", display:"flex", alignItems:"center", gap:12,
         borderBottom:`1px solid ${C.border}`, background:`${C.surface}CC`, backdropFilter:"blur(12px)",
         position:"sticky", top:0, zIndex:100 }}>
@@ -341,6 +357,7 @@ function Dashboard({ user, onOpen, onNew, onLogout }) {
         ) : (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {groups.map((g, i) => {
+              // Normalize DB data to match your original shape
               const memberNames = g.members?.map(m => m.name) || [];
               const expsNorm = (g.expenses || []).map(e => ({
                 ...e, paidBy: e.paid_by, splitBetween: e.split_between, amount: Number(e.amount)
@@ -395,16 +412,21 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
   const [groupId, setGroupId] = useState(initialGroup?.id || null);
   const [shareToken, setShareToken] = useState(initialGroup?.share_token || null);
   const [memberInput, setMemberInput] = useState("");
+  // Normalize members from DB (array of {id, name}) to match original (array of strings)
   const [members, setMembers] = useState(
     (initialGroup?.members || []).map(m => typeof m === "string" ? m : m.name)
   );
   const [memberIds, setMemberIds] = useState(
     Object.fromEntries((initialGroup?.members || []).filter(m=>typeof m==="object").map(m=>[m.name, m.id]))
   );
+  // Normalize expenses from DB
   const [expenses, setExpenses] = useState(
     (initialGroup?.expenses || []).map(e => ({
-      id: e.id, title: e.title, amount: Number(e.amount),
-      paidBy: e.paid_by || e.paidBy, splitBetween: e.split_between || e.splitBetween || [],
+      id: e.id,
+      title: e.title,
+      amount: Number(e.amount),
+      paidBy: e.paid_by || e.paidBy,
+      splitBetween: e.split_between || e.splitBetween || [],
     }))
   );
   const [expTitle, setExpTitle] = useState("");
@@ -420,6 +442,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
   const totalExp = expenses.reduce((s,e)=>s+e.amount, 0);
   const { balance, settlements } = calcSettlements(members, expenses);
 
+  // Create group in Supabase if not yet created
   const ensureGroup = async () => {
     if (groupId) return groupId;
     setSaving(true);
@@ -459,7 +482,13 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
   const saveExpense = async () => {
     if (!expTitle || !expAmount || !expPaidBy || !expSplit.length) return;
     setSaving(true);
-    const payload = { group_id: groupId, title: expTitle, amount: parseFloat(expAmount), paid_by: expPaidBy, split_between: expSplit };
+    const payload = {
+      group_id: groupId,
+      title: expTitle,
+      amount: parseFloat(expAmount),
+      paid_by: expPaidBy,
+      split_between: expSplit,
+    };
     if (editIdx !== null) {
       const expId = expenses[editIdx].id;
       const { data } = await supabase.from("expenses").update(payload).eq("id", expId).select().single();
@@ -509,13 +538,16 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
         radial-gradient(ellipse at 80% 100%, #10294033 0%, transparent 60%)` }}>
       <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}} @keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}} @keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input::placeholder{color:#3A4D63} select option{background:#161D2F}`}</style>
 
+      {/* Header — your original design */}
       <div style={{ padding:"14px 20px", display:"flex", alignItems:"center", gap:12,
         borderBottom:`1px solid ${C.border}`, background:`${C.surface}CC`, backdropFilter:"blur(12px)",
         position:"sticky", top:0, zIndex:100 }}>
         <button onClick={onBack} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8,
           padding:"5px 12px", color:C.muted, cursor:"pointer", fontSize:12, fontFamily:"'DM Sans',sans-serif" }}>← Back</button>
         <img src="/logo.png" style={{ width:32, height:32, borderRadius:9, objectFit:"cover" }} />
-        <div style={{ fontWeight:700, fontSize:15, letterSpacing:-0.3 }}>{groupName || "New Group"}</div>
+        <div style={{ fontWeight:700, fontSize:15, letterSpacing:-0.3 }}>
+          {groupName || "New Group"}
+        </div>
         {groupId && (
           <button onClick={generateShareLink} style={{ marginLeft:"auto", background:`${C.accent}18`,
             border:`1px solid ${C.accent}44`, borderRadius:8, padding:"5px 14px",
@@ -526,6 +558,8 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
       </div>
 
       <div style={{ maxWidth:560, margin:"0 auto", padding:"24px 16px" }}>
+
+        {/* Stepper */}
         <div style={{ display:"flex", alignItems:"center", marginBottom:28 }}>
           {STEPS.map((label, i) => (
             <div key={i} style={{ display:"flex", alignItems:"center", flex: i<STEPS.length-1 ? 1 : "none" }}>
@@ -548,19 +582,23 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
           ))}
         </div>
 
+        {/* STEP 1 */}
         {step === 1 && (
           <div style={{ animation:"fadeIn 0.3s ease" }}>
             <h2 style={{ margin:"0 0 4px", fontSize:20, fontWeight:700, letterSpacing:-0.4 }}>Create your group</h2>
             <p style={{ margin:"0 0 22px", color:C.muted, fontSize:13 }}>Name your group and add members</p>
+
             <Card style={{ marginBottom:14 }}>
               <Label>Group Name</Label>
               <Input placeholder="e.g. Goa Trip, Hostel Room..." value={groupName} onChange={e=>setGroupName(e.target.value)} />
             </Card>
+
             <Card>
               <Label>Members</Label>
               <div style={{ display:"flex", gap:8 }}>
                 <Input placeholder="Enter member name" value={memberInput}
-                  onChange={e=>setMemberInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addMember()} />
+                  onChange={e=>setMemberInput(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&addMember()} />
                 <Btn onClick={addMember} loading={saving}>Add</Btn>
               </div>
               {members.length > 0 ? (
@@ -570,7 +608,8 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                       borderRadius:999, background:C.subtle, border:`1px solid ${C.border}` }}>
                       <Avatar name={m} size={20} idx={i} />
                       <span style={{ fontSize:13, fontWeight:500 }}>{m}</span>
-                      <button onClick={()=>removeMember(m)} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:15, padding:0 }}>×</button>
+                      <button onClick={()=>removeMember(m)} style={{
+                        background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:15, padding:0, lineHeight:1 }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -578,16 +617,21 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 <div style={{ marginTop:14, textAlign:"center", color:C.muted, fontSize:13, padding:"10px 0" }}>Add at least 2 members</div>
               )}
             </Card>
+
             <div style={{ display:"flex", justifyContent:"flex-end", marginTop:18 }}>
-              <Btn onClick={()=>setStep(2)} disabled={!groupName.trim()||members.length<2}>Next → Add Expenses</Btn>
+              <Btn onClick={()=>setStep(2)} disabled={!groupName.trim()||members.length<2}>
+                Next → Add Expenses
+              </Btn>
             </div>
           </div>
         )}
 
+        {/* STEP 2 */}
         {step === 2 && (
           <div style={{ animation:"fadeIn 0.3s ease" }}>
             <h2 style={{ margin:"0 0 4px", fontSize:20, fontWeight:700, letterSpacing:-0.4 }}>Add expenses</h2>
             <p style={{ margin:"0 0 22px", color:C.muted, fontSize:13 }}>Record who paid and who was involved</p>
+
             <Card style={{ marginBottom:14 }}>
               <div style={{ display:"flex", gap:8, marginBottom:12 }}>
                 <div style={{ flex:1 }}>
@@ -599,6 +643,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                   <Input type="number" placeholder="0" value={expAmount} onChange={e=>setExpAmount(e.target.value)} />
                 </div>
               </div>
+
               <Label>Paid By</Label>
               <select value={expPaidBy} onChange={e=>setExpPaidBy(e.target.value)} style={{
                 width:"100%", padding:"10px 14px", borderRadius:10, border:`1.5px solid ${C.border}`,
@@ -607,6 +652,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 <option value="">Select who paid</option>
                 {members.map(m=><option key={m} value={m}>{m}</option>)}
               </select>
+
               <Label>Split Between</Label>
               <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
                 <button onClick={()=>setExpSplit(expSplit.length===members.length?[]:[...members])} style={{
@@ -619,17 +665,20 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                     onClick={()=>setExpSplit(p=>p.includes(m)?p.filter(x=>x!==m):[...p,m])} idx={i} />
                 ))}
               </div>
+
               {expAmount && expSplit.length > 0 && (
                 <div style={{ marginTop:10, padding:"8px 12px", borderRadius:10,
                   background:`${C.accent}11`, border:`1px solid ${C.accent}22`, fontSize:13, color:C.accent }}>
                   ₹{(parseFloat(expAmount||0)/expSplit.length).toFixed(2)} per person × {expSplit.length}
                 </div>
               )}
+
               <Btn onClick={saveExpense} disabled={!expTitle||!expAmount||!expPaidBy||!expSplit.length}
                 loading={saving} full style={{ marginTop:14 }}>
                 {editIdx!==null ? "Update Expense ✓" : "+ Add Expense"}
               </Btn>
             </Card>
+
             {expenses.length > 0 && (
               <>
                 <div style={{ fontSize:12, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>
@@ -649,6 +698,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 ))}
               </>
             )}
+
             <div style={{ display:"flex", justifyContent:"space-between", marginTop:16 }}>
               <Btn variant="ghost" onClick={()=>setStep(1)}>← Back</Btn>
               <Btn onClick={()=>setStep(3)} disabled={expenses.length===0}>View Settlement →</Btn>
@@ -656,6 +706,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
           </div>
         )}
 
+        {/* STEP 3 */}
         {step === 3 && (
           <div style={{ animation:"fadeIn 0.3s ease" }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22 }}>
@@ -665,6 +716,8 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
               </div>
               <Btn onClick={()=>setStep(2)} variant="ghost" style={{ fontSize:12 }}>+ Expense</Btn>
             </div>
+
+            {/* Balances */}
             <Card style={{ marginBottom:14 }}>
               <Label>Per Person Balance</Label>
               {members.map((m,i)=>{
@@ -683,6 +736,8 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 );
               })}
             </Card>
+
+            {/* Settlements */}
             {settlements.length===0 ? (
               <div style={{ background:`${C.emerald}11`, border:`1px solid ${C.emerald}33`, borderRadius:14,
                 padding:24, textAlign:"center", marginBottom:14 }}>
@@ -711,6 +766,8 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 ))}
               </Card>
             )}
+
+            {/* Expense breakdown */}
             {expenses.length > 0 && (
               <Card>
                 <Label>Expense Breakdown</Label>
@@ -735,6 +792,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
                 </div>
               </Card>
             )}
+
             <div style={{ display:"flex", gap:10, marginTop:16 }}>
               <Btn variant="ghost" onClick={generateShareLink} full>🔗 Share Group Link</Btn>
               <Btn variant="ghost" onClick={onBack} full>← All Groups</Btn>
@@ -743,6 +801,7 @@ function GroupApp({ user, initialGroup, onBack, onSave }) {
         )}
       </div>
 
+      {/* Share Modal */}
       {shareModal && (
         <div style={{ position:"fixed", inset:0, background:"#00000088", backdropFilter:"blur(4px)",
           display:"flex", alignItems:"center", justifyContent:"center", zIndex:200, padding:20 }}>
@@ -777,10 +836,12 @@ export default function App() {
   const [activeGroup, setActiveGroup] = useState(null);
 
   useEffect(() => {
+    // Get existing session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
     });
+    // Listen for login/logout/OAuth redirect
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
@@ -794,6 +855,7 @@ export default function App() {
     window.location.hash = "";
   };
 
+  // Loading screen
   if (authLoading) return (
     <div style={{ minHeight:"100vh", background:C.bg, display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", gap:16 }}>
@@ -807,15 +869,20 @@ export default function App() {
   if (!user) return <LoginPage onLogin={setUser} />;
 
   if (view === "group") return (
-    <GroupApp user={user} initialGroup={activeGroup}
+    <GroupApp
+      user={user}
+      initialGroup={activeGroup}
       onBack={() => { setView("dashboard"); setActiveGroup(null); window.location.hash = ""; }}
-      onSave={() => {}} />
+      onSave={() => {}}
+    />
   );
 
   return (
-    <Dashboard user={user}
+    <Dashboard
+      user={user}
       onOpen={(g) => { setActiveGroup(g); setView("group"); }}
       onNew={() => { setActiveGroup(null); setView("group"); }}
-      onLogout={logout} />
+      onLogout={logout}
+    />
   );
 }
